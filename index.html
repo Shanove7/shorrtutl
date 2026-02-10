@@ -3,132 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShortLink Tool</title>
+    <title>ShortLink Fast</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .glass { background: rgba(255, 255, 255, 0.95); border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #2563eb; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .glass { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #2563eb; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .nav-active { color: #2563eb; background-color: #eff6ff; font-weight: 600; }
         .hidden { display: none !important; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
-    <div id="redirect-overlay" class="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center hidden">
-        <div class="loader w-12 h-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
-        <p class="text-slate-500 text-sm font-medium animate-pulse">Mengalihkan...</p>
+    <div id="redirect-overlay" class="fixed inset-0 bg-white z-[99] flex flex-col items-center justify-center hidden">
+        <div class="loader w-10 h-10 mb-4"></div>
+        <p class="text-slate-500 animate-pulse">Mengalihkan...</p>
     </div>
 
-    <nav class="sticky top-0 z-40 w-full glass border-b border-slate-200">
-        <div class="max-w-5xl mx-auto px-4">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('')">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
-                    <span class="font-bold text-xl text-slate-800">ShortLink</span>
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="navigate('')" id="btn-home" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:text-blue-600 transition-colors">Home</button>
-                    <button onclick="navigate('docs')" id="btn-docs" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:text-blue-600 transition-colors">API Docs</button>
-                </div>
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('home')">
+                <div class="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold">S</div>
+                <span class="font-bold text-lg">ShortLink</span>
+            </div>
+            <div class="flex gap-2 text-sm">
+                <button onclick="switchTab('home')" id="nav-home" class="px-3 py-1.5 rounded-md bg-blue-50 text-blue-600 font-medium">Home</button>
+                <button onclick="switchTab('docs')" id="nav-docs" class="px-3 py-1.5 rounded-md text-slate-500 hover:text-blue-600">API</button>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow w-full max-w-5xl mx-auto px-4 py-8">
+    <main class="flex-grow max-w-3xl mx-auto w-full p-4">
         
-        <div id="view-home">
-            <div class="max-w-xl mx-auto text-center mb-10 mt-6">
-                <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Perpendek Link,<br><span class="text-blue-600">Perluas Jangkauan.</span></h1>
-                <p class="text-slate-500">Gratis custom alias (snx.biz.id/nama-kamu).</p>
+        <div id="page-home">
+            <div class="text-center py-8">
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">Shorten & Share</h1>
+                <p class="text-slate-500">Buat link pendek dengan custom alias sesukamu.</p>
             </div>
 
-            <div class="max-w-lg mx-auto glass rounded-2xl p-6 sm:p-8">
-                <form id="shorten-form" class="space-y-5">
+            <div class="glass rounded-xl p-6 mb-8 relative">
+                <form id="form-shorten" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">URL Tujuan</label>
-                        <div class="relative">
-                            <i class="fa-solid fa-link absolute left-4 top-3.5 text-slate-400"></i>
-                            <input type="url" id="long-url" required placeholder="https://..." 
-                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm">
-                        </div>
+                        <label class="text-xs font-bold text-slate-500 uppercase">URL Asli</label>
+                        <input type="url" id="inp-url" required placeholder="https://example.com" 
+                            class="w-full mt-1 border border-slate-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Custom Alias</label>
-                        <div class="relative flex items-center">
-                            <span class="absolute left-4 text-slate-400 text-sm">/</span>
-                            <input type="text" id="custom-code" placeholder="bebas-pilih" 
-                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-8 pr-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm">
+                        <label class="text-xs font-bold text-slate-500 uppercase">Custom Alias (Opsional)</label>
+                        <div class="flex mt-1">
+                            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 text-slate-500 text-sm">/</span>
+                            <input type="text" id="inp-code" placeholder="my-link" 
+                                class="w-full border border-slate-300 rounded-r-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
                     </div>
-                    <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg transition-transform active:scale-95">
-                        Buat Shortlink
+                    
+                    <div id="error-box" class="hidden p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 text-center"></div>
+
+                    <button type="submit" id="btn-submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-600/20">
+                        Buat Link
                     </button>
                 </form>
 
-                <div id="result-area" class="hidden mt-6 pt-6 border-t border-slate-100">
-                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between gap-3">
-                        <div class="overflow-hidden">
-                            <p class="text-[10px] text-green-600 font-bold uppercase mb-1">Berhasil</p>
-                            <a id="short-link-display" href="#" target="_blank" class="text-green-700 font-medium truncate block font-mono"></a>
-                        </div>
-                        <button onclick="copyLink()" class="bg-white border border-green-200 text-green-600 p-2.5 rounded-lg hover:bg-green-100">
-                            <i class="fa-regular fa-copy"></i>
+                <div id="result-box" class="hidden text-center space-y-4 pt-2">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p class="text-xs text-green-600 font-bold uppercase mb-1">Berhasil!</p>
+                        <a id="result-link" href="#" target="_blank" class="text-lg font-bold text-green-700 hover:underline break-all"></a>
+                    </div>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="copyResult()" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-900 flex items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> Salin
+                        </button>
+                        <button onclick="resetApp()" class="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50">
+                            Buat Baru
                         </button>
                     </div>
-                    <button onclick="resetForm()" class="w-full mt-4 text-xs text-slate-400 hover:text-slate-600">Buat lagi</button>
                 </div>
-                <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 text-red-600 text-xs text-center rounded-lg border border-red-100"></div>
             </div>
 
-            <div class="max-w-lg mx-auto mt-12">
-                <div class="flex items-center gap-2 mb-4 px-2">
-                    <i class="fa-solid fa-clock-rotate-left text-slate-400 text-xs"></i>
-                    <h3 class="text-slate-500 text-xs font-bold uppercase">Riwayat Terbaru</h3>
-                </div>
-                <div id="recent-links" class="space-y-3"></div>
+            <div class="mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-history text-slate-400"></i>
+                <h3 class="font-bold text-slate-700 text-sm uppercase">Riwayat Link</h3>
+            </div>
+            <div id="list-history" class="space-y-3 pb-10">
+                <div class="text-center py-8 text-slate-400 text-sm italic">Memuat data...</div>
             </div>
         </div>
 
-        <div id="view-docs" class="hidden max-w-3xl mx-auto">
-            <div class="mb-8 pb-8 border-b border-slate-200">
-                <h1 class="text-3xl font-bold text-slate-900 mb-2">Dokumentasi API</h1>
-                <p class="text-slate-600">Panduan integrasi.</p>
-            </div>
-            <div class="space-y-8">
-                <section>
-                    <h2 class="text-xl font-bold text-slate-800 mb-3">1. Format URL</h2>
-                    <div class="bg-slate-900 text-slate-300 p-4 rounded-lg font-mono text-sm">
+        <div id="page-docs" class="hidden">
+            <h2 class="text-2xl font-bold mb-6">Dokumentasi API</h2>
+            <div class="space-y-6">
+                <section class="glass p-5 rounded-xl">
+                    <h3 class="font-bold text-blue-600 mb-2">1. Format Redirect</h3>
+                    <code class="block bg-slate-900 text-green-400 p-3 rounded-lg text-sm font-mono break-all">
                         GET https://snx.biz.id/?s={alias}
-                    </div>
+                    </code>
                 </section>
-                <section>
-                    <h2 class="text-xl font-bold text-slate-800 mb-3">2. Contoh Redirect (JS)</h2>
-                    <div class="bg-slate-900 text-slate-300 p-4 rounded-lg font-mono text-sm overflow-auto">
-<pre>const params = new URLSearchParams(window.location.search);
+                <section class="glass p-5 rounded-xl">
+                    <h3 class="font-bold text-blue-600 mb-2">2. Client-Side Logic</h3>
+                    <pre class="bg-slate-900 text-slate-300 p-3 rounded-lg text-xs overflow-x-auto">
+const params = new URLSearchParams(window.location.search);
 const alias = params.get('s');
-if(alias) {
-  // Logic redirect di sini
-  window.location.href = "URL_ASLI"; 
+
+if (alias) {
+  // Fetch from DB using alias
+  // window.location.href = originalUrl;
 }</pre>
-                    </div>
                 </section>
             </div>
         </div>
 
     </main>
 
-    <footer class="border-t border-slate-200 bg-white mt-auto py-6">
-        <div class="text-center text-slate-400 text-xs">© 2024 ShortLink Tool.</div>
-    </footer>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
@@ -137,164 +128,182 @@ if(alias) {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         let currentUser = null;
+        let unsubscribeHistory = null;
 
-        const dom = {
-            views: { home: document.getElementById('view-home'), docs: document.getElementById('view-docs') },
-            btns: { home: document.getElementById('btn-home'), docs: document.getElementById('btn-docs') },
-            form: document.getElementById('shorten-form'),
-            result: document.getElementById('result-area'),
-            display: document.getElementById('short-link-display'),
-            error: document.getElementById('error-msg'),
-            submit: document.getElementById('submit-btn'),
-            inputs: { long: document.getElementById('long-url'), code: document.getElementById('custom-code') },
-            overlay: document.getElementById('redirect-overlay'),
-            list: document.getElementById('recent-links')
+        const el = {
+            pages: { home: document.getElementById('page-home'), docs: document.getElementById('page-docs') },
+            navs: { home: document.getElementById('nav-home'), docs: document.getElementById('nav-docs') },
+            form: document.getElementById('form-shorten'),
+            inpUrl: document.getElementById('inp-url'),
+            inpCode: document.getElementById('inp-code'),
+            btnSubmit: document.getElementById('btn-submit'),
+            resultBox: document.getElementById('result-box'),
+            resultLink: document.getElementById('result-link'),
+            errorBox: document.getElementById('error-box'),
+            historyList: document.getElementById('list-history'),
+            overlay: document.getElementById('redirect-overlay')
         };
 
-        window.navigate = (page) => {
-            if(page === 'docs') {
-                dom.views.home.classList.add('hidden');
-                dom.views.docs.classList.remove('hidden');
-                dom.btns.home.classList.remove('nav-active');
-                dom.btns.docs.classList.add('nav-active');
-                window.location.hash = 'docs';
+        window.switchTab = (tab) => {
+            if (tab === 'docs') {
+                el.pages.home.classList.add('hidden');
+                el.pages.docs.classList.remove('hidden');
+                el.navs.home.classList.replace('bg-blue-50', 'text-slate-500');
+                el.navs.home.classList.replace('text-blue-600', 'hover:text-blue-600');
+                el.navs.docs.classList.add('bg-blue-50', 'text-blue-600');
             } else {
-                dom.views.home.classList.remove('hidden');
-                dom.views.docs.classList.add('hidden');
-                dom.btns.home.classList.add('nav-active');
-                dom.btns.docs.classList.remove('nav-active');
-                window.location.hash = '';
+                el.pages.home.classList.remove('hidden');
+                el.pages.docs.classList.add('hidden');
+                el.navs.docs.classList.remove('bg-blue-50', 'text-blue-600');
+                el.navs.home.classList.add('bg-blue-50', 'text-blue-600');
+                el.navs.home.classList.remove('text-slate-500');
             }
         };
 
-        if(window.location.hash === '#docs') navigate('docs');
-        else navigate('');
+        function init() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                signInAnonymously(auth).catch(e => console.error("Auth Error:", e));
+            }
 
-        window.addEventListener('hashchange', () => {
-            if(window.location.hash === '#docs') navigate('docs');
-            else navigate('');
-        });
-
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    const cred = await signInAnonymously(auth);
-                    currentUser = cred.user;
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    checkRedirect();
+                    listenHistory();
                 }
-                checkRedirect();
-                loadRecent();
-            } catch(e) { console.error(e); }
-        };
-        initAuth();
+            });
+        }
+        init();
 
         async function checkRedirect() {
-            const p = new URLSearchParams(window.location.search);
-            const s = p.get('s');
-            if(!s) return;
+            const params = new URLSearchParams(window.location.search);
+            const alias = params.get('s');
+            if (!alias) return;
+
+            el.overlay.classList.remove('hidden');
             
-            dom.overlay.classList.remove('hidden');
             try {
-                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'links_' + s));
-                if(snap.exists()) {
-                    window.location.href = snap.data().originalUrl;
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'links_' + alias);
+                const snap = await getDoc(docRef);
+                
+                if (snap.exists()) {
+                    const url = snap.data().originalUrl;
+                    window.location.href = url.startsWith('http') ? url : `https://${url}`;
                 } else {
-                    dom.overlay.classList.add('hidden');
-                    alert('Link tidak ditemukan!');
+                    el.overlay.classList.add('hidden');
+                    alert('Link tidak ditemukan atau sudah dihapus.');
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
-            } catch(e) {
-                dom.overlay.classList.add('hidden');
+            } catch (e) {
+                console.error(e);
+                el.overlay.classList.add('hidden');
+                alert('Gagal memuat link.');
             }
         }
 
-        dom.form.addEventListener('submit', async (e) => {
+        el.form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            dom.error.classList.add('hidden');
-            
-            const url = dom.inputs.long.value.trim();
-            let code = dom.inputs.code.value.trim().replace(/[^a-zA-Z0-9-]/g, "");
-            
-            if(!code) code = Math.random().toString(36).substring(2, 8);
+            el.errorBox.classList.add('hidden');
+            el.btnSubmit.disabled = true;
+            el.btnSubmit.innerHTML = '<div class="loader mx-auto border-white border-t-transparent w-5 h-5"></div>';
 
-            setLoading(true);
+            const originalUrl = el.inpUrl.value.trim();
+            let code = el.inpCode.value.trim().replace(/[^a-zA-Z0-9-]/g, "");
+
             try {
-                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'links_' + code);
-                const snap = await getDoc(ref);
+                if (!code) code = Math.random().toString(36).substring(2, 7);
                 
-                if(snap.exists()) {
-                    showError('Alias sudah dipakai, cari yang lain.');
-                    setLoading(false);
+                const docId = 'links_' + code;
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', docId);
+                
+                // Cek duplikat manual
+                const checkSnap = await getDoc(docRef);
+                if (checkSnap.exists()) {
+                    throw new Error(`Alias "${code}" sudah dipakai. Ganti yang lain.`);
+                }
+
+                await setDoc(docRef, {
+                    code: code,
+                    originalUrl: originalUrl,
+                    createdAt: serverTimestamp(),
+                    createdBy: currentUser.uid
+                });
+
+                // Success UI Update
+                const fullUrl = `${window.location.origin}${window.location.pathname}?s=${code}`;
+                el.resultLink.textContent = fullUrl;
+                el.resultLink.href = fullUrl;
+                
+                el.form.classList.add('hidden');
+                el.resultBox.classList.remove('hidden');
+
+            } catch (err) {
+                el.errorBox.textContent = err.message || "Terjadi kesalahan sistem.";
+                el.errorBox.classList.remove('hidden');
+            } finally {
+                el.btnSubmit.disabled = false;
+                el.btnSubmit.textContent = 'Buat Link';
+            }
+        });
+
+        function listenHistory() {
+            if (unsubscribeHistory) unsubscribeHistory();
+
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data');
+            
+            // Menggunakan onSnapshot untuk Realtime Update
+            unsubscribeHistory = onSnapshot(colRef, (snapshot) => {
+                const links = [];
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (d.code && d.originalUrl) links.push(d);
+                });
+
+                // Sort client side (terbaru di atas)
+                links.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                if (links.length === 0) {
+                    el.historyList.innerHTML = '<div class="text-center py-4 text-slate-400 bg-slate-50 rounded-lg text-sm">Belum ada link.</div>';
                     return;
                 }
 
-                await setDoc(ref, {
-                    originalUrl: url,
-                    code: code,
-                    createdAt: serverTimestamp(),
-                    createdBy: currentUser ? currentUser.uid : 'anon'
-                });
-
-                showResult(code);
-                loadRecent();
-            } catch(e) {
-                showError('Gagal membuat link.');
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        function showResult(code) {
-            const base = window.location.href.split('?')[0].split('#')[0];
-            const full = `${base}?s=${code}`;
-            dom.display.textContent = full;
-            dom.display.href = full;
-            dom.form.classList.add('hidden');
-            dom.result.classList.remove('hidden');
-        }
-
-        function setLoading(state) {
-            dom.submit.disabled = state;
-            dom.submit.innerHTML = state ? '<div class="loader mx-auto border-blue-100 border-t-transparent"></div>' : 'Buat Shortlink';
-        }
-
-        function showError(msg) {
-            dom.error.textContent = msg;
-            dom.error.classList.remove('hidden');
-        }
-
-        window.resetForm = () => {
-            dom.inputs.long.value = '';
-            dom.inputs.code.value = '';
-            dom.form.classList.remove('hidden');
-            dom.result.classList.add('hidden');
-        };
-
-        window.copyLink = () => {
-            navigator.clipboard.writeText(dom.display.textContent);
-            alert('Tersalin!');
-        };
-
-        async function loadRecent() {
-            try {
-                const snaps = await getDocs(collection(db, 'artifacts', appId, 'public', 'data'));
-                const links = [];
-                snaps.forEach(d => links.push(d.data()));
-                links.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-                
-                dom.list.innerHTML = links.slice(0,5).map(l => `
-                    <div class="bg-white border border-slate-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
+                el.historyList.innerHTML = links.slice(0, 10).map(link => `
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex justify-between items-center group hover:border-blue-300 transition-colors">
                         <div class="overflow-hidden mr-3">
-                            <p class="text-slate-800 font-mono text-sm font-bold">/${l.code}</p>
-                            <p class="text-slate-400 text-[10px] truncate">${l.originalUrl}</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 rounded">/${link.code}</span>
+                                <span class="text-xs text-slate-400 font-mono truncate max-w-[150px]">${link.originalUrl}</span>
+                            </div>
+                            <a href="?s=${link.code}" target="_blank" class="text-blue-600 font-bold text-sm hover:underline block truncate">
+                                ${window.location.origin}?s=${link.code}
+                            </a>
                         </div>
-                        <a href="?s=${l.code}" target="_blank" class="bg-slate-50 p-2 rounded text-slate-400 hover:text-blue-600">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <a href="?s=${link.code}" target="_blank" class="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 hover:bg-blue-600 hover:text-white transition-colors">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                         </a>
                     </div>
-                `).join('') || '<p class="text-center text-xs text-slate-400">Belum ada data.</p>';
-            } catch(e) {}
+                `).join('');
+            }, (error) => {
+                console.error("History Error:", error);
+                el.historyList.innerHTML = '<div class="text-center text-red-400 text-xs">Gagal memuat riwayat.</div>';
+            });
         }
+
+        window.resetApp = () => {
+            el.inpUrl.value = '';
+            el.inpCode.value = '';
+            el.form.classList.remove('hidden');
+            el.resultBox.classList.add('hidden');
+            el.errorBox.classList.add('hidden');
+        };
+
+        window.copyResult = () => {
+            navigator.clipboard.writeText(el.resultLink.textContent).then(() => {
+                alert("Link berhasil disalin!");
+            });
+        };
     </script>
 </body>
 </html>

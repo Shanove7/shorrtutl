@@ -1,391 +1,302 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, query } from 'firebase/firestore';
-import { Link2, Copy, Activity, Globe, ExternalLink, Loader2, Menu, X } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShortLink Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .glass { background: rgba(255, 255, 255, 0.95); border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #2563eb; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .nav-active { color: #2563eb; background-color: #eff6ff; font-weight: 600; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
 
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [view, setView] = useState('home');
-  const [longUrl, setLongUrl] = useState('');
-  const [customCode, setCustomCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState(null);
-  const [generatedCode, setGeneratedCode] = useState(null);
-  const [error, setError] = useState('');
-  const [recentLinks, setRecentLinks] = useState([]);
-  const [copySuccess, setCopySuccess] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      await signInAnonymously(auth);
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'shortlinks'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const links = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecentLinks(links.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds));
-    }, (err) => {
-      console.error(err);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  const generateRandomCode = (length = 6) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
-  const handleShorten = async (e) => {
-    e.preventDefault();
-    setError('');
-    setGeneratedLink(null);
-    setGeneratedCode(null);
-    setCopySuccess('');
-
-    if (!longUrl) {
-      setError('Masukkan URL yang valid.');
-      return;
-    }
-
-    let codeToUse = customCode.trim();
-    
-    if (codeToUse && !/^[a-zA-Z0-9-_]+$/.test(codeToUse)) {
-      setError('Custom code hanya boleh huruf, angka, strip, dan underscore.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      if (codeToUse) {
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'shortlinks', codeToUse);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setError(`Code "${codeToUse}" sudah digunakan. Pilih yang lain.`);
-          setLoading(false);
-          return;
-        }
-      } else {
-        let unique = false;
-        while (!unique) {
-          codeToUse = generateRandomCode();
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'shortlinks', codeToUse);
-          const docSnap = await getDoc(docRef);
-          if (!docSnap.exists()) unique = true;
-        }
-      }
-
-      const formattedUrl = longUrl.startsWith('http') ? longUrl : `https://${longUrl}`;
-
-      const newLink = {
-        originalUrl: formattedUrl,
-        shortCode: codeToUse,
-        createdAt: serverTimestamp(),
-        views: 0,
-        creatorId: user.uid
-      };
-
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shortlinks', codeToUse), newLink);
-      
-      setGeneratedLink(`snx.biz.id/${codeToUse}`);
-      setGeneratedCode(codeToUse);
-      setLongUrl('');
-      setCustomCode('');
-    } catch (err) {
-      setError('Terjadi kesalahan sistem.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copyToClipboard = (text) => {
-    const el = document.createElement('textarea');
-    el.value = text;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    setCopySuccess('Copied!');
-    setTimeout(() => setCopySuccess(''), 2000);
-  };
-
-  const visitLink = (url) => {
-    window.open(url, '_blank');
-  };
-
-  const renderHome = () => (
-    <div className="max-w-3xl mx-auto px-4 py-8 md:py-12 w-full">
-      <div className="text-center mb-8 md:mb-12">
-        <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-3 md:mb-4 tracking-tight">
-          Perpendek Link Anda
-        </h1>
-        <p className="text-base md:text-lg text-gray-500">
-          Tools manajemen tautan sederhana & cepat.
-        </p>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 transition-all hover:shadow-2xl">
-        <form onSubmit={handleShorten} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL Panjang</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Link2 className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm md:text-base"
-                placeholder="https://contoh.com/panjang"
-                value={longUrl}
-                onChange={(e) => setLongUrl(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Custom Code <span className="text-gray-400 font-normal">(Opsional)</span>
-            </label>
-            <div className="flex items-center">
-              <span className="inline-flex items-center px-3 py-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-xs md:text-sm whitespace-nowrap">
-                snx.biz.id/
-              </span>
-              <input
-                type="text"
-                className="flex-1 block w-full min-w-0 rounded-none rounded-r-lg border border-gray-300 py-3 px-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm md:text-base"
-                placeholder="rules"
-                value={customCode}
-                onChange={(e) => setCustomCode(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-sm bg-red-50 p-3 rounded-md flex items-center">
-              <Activity className="w-4 h-4 mr-2 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Shorten URL'}
-          </button>
-        </form>
-
-        {generatedLink && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-lg animate-fade-in-up">
-            <div className="flex flex-col gap-3">
-              <div className="w-full">
-                <span className="text-sm text-green-700 font-medium mb-1 block">Berhasil dibuat!</span>
-                <div className="text-lg md:text-xl font-bold text-green-900 break-all">
-                  {generatedLink}
-                </div>
-              </div>
-              <div className="flex gap-2 w-full">
-                 <button
-                  onClick={() => {
-                     const link = recentLinks.find(l => l.shortCode === generatedCode);
-                     if(link) visitLink(link.originalUrl);
-                  }}
-                  className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center"
-                >
-                  <ExternalLink className="w-4 h-4 mr-1" /> Visit
-                </button>
-                <button
-                  onClick={() => copyToClipboard(generatedLink)}
-                  className="flex-1 py-2 bg-white border border-green-200 text-green-700 hover:bg-green-50 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-                >
-                  {copySuccess ? 'Copied!' : <><Copy className="w-4 h-4 mr-1" /> Copy</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center px-1">
-          <Activity className="w-5 h-5 mr-2" /> Link Terakhir
-        </h3>
-        {recentLinks.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4 bg-gray-50 rounded-lg mx-1">Belum ada link yang dibuat.</p>
-        ) : (
-          <div className="grid gap-3">
-            {recentLinks.map((link) => (
-              <div key={link.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 text-blue-600 font-medium">
-                    <Globe className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate text-sm md:text-base">snx.biz.id/{link.shortCode}</span>
-                  </div>
-                  <p className="text-xs text-gray-400 truncate mt-1">{link.originalUrl}</p>
-                </div>
-                <div className="flex items-center space-x-2 flex-shrink-0">
-                  <button 
-                    onClick={() => copyToClipboard(`snx.biz.id/${link.shortCode}`)}
-                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => visitLink(link.originalUrl)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div id="redirect-overlay" class="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center hidden">
+        <div class="loader w-12 h-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+        <p class="text-slate-500 text-sm font-medium animate-pulse">Mengalihkan...</p>
     </div>
-  );
 
-  const renderDocs = () => (
-    <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 w-full">
-      <div className="mb-8 md:mb-10 border-b border-gray-200 pb-6 md:pb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Dokumentasi API</h1>
-        <p className="text-base md:text-lg text-gray-600">
-          Integrasikan pemendek URL kami ke dalam aplikasi Anda.
-        </p>
-      </div>
+    <nav class="sticky top-0 z-40 w-full glass border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('')">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+                    <span class="font-bold text-xl text-slate-800">ShortLink</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="navigate('')" id="btn-home" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:text-blue-600 transition-colors">Home</button>
+                    <button onclick="navigate('docs')" id="btn-docs" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:text-blue-600 transition-colors">API Docs</button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-      <div className="grid gap-8 md:gap-12">
-        <section className="w-full">
-          <div className="flex items-center space-x-3 mb-4">
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs md:text-sm font-bold font-mono">POST</span>
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 break-all">/api/v1/shorten</h2>
-          </div>
-          <p className="text-gray-600 mb-4 text-sm md:text-base">Membuat shortlink baru.</p>
-          
-          <div className="bg-gray-900 rounded-xl overflow-hidden shadow-lg w-full">
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-              <span className="text-xs text-gray-400 font-mono">JSON Body</span>
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              </div>
+    <main class="flex-grow w-full max-w-5xl mx-auto px-4 py-8">
+        
+        <div id="view-home">
+            <div class="max-w-xl mx-auto text-center mb-10 mt-6">
+                <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Perpendek Link,<br><span class="text-blue-600">Perluas Jangkauan.</span></h1>
+                <p class="text-slate-500">Gratis custom alias (snx.biz.id/nama-kamu).</p>
             </div>
-            <div className="p-4 overflow-x-auto w-full">
-              <pre className="text-xs md:text-sm font-mono text-gray-300 whitespace-pre">
-{`{
-  "url": "https://website.com",
-  "custom_code": "my-code"
-}`}
-              </pre>
-            </div>
-          </div>
 
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden w-full">
-            <div className="px-4 py-2 bg-white border-b border-gray-200">
-              <span className="text-xs text-gray-500 font-mono">Response</span>
-            </div>
-            <div className="p-4 overflow-x-auto w-full">
-              <pre className="text-xs md:text-sm font-mono text-gray-800 whitespace-pre">
-{`{
-  "status": "success",
-  "data": {
-    "short_url": "https://snx.biz.id/my-code",
-    "original_url": "https://website.com"
-  }
-}`}
-              </pre>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
+            <div class="max-w-lg mx-auto glass rounded-2xl p-6 sm:p-8">
+                <form id="shorten-form" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">URL Tujuan</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-link absolute left-4 top-3.5 text-slate-400"></i>
+                            <input type="url" id="long-url" required placeholder="https://..." 
+                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Custom Alias</label>
+                        <div class="relative flex items-center">
+                            <span class="absolute left-4 text-slate-400 text-sm">/</span>
+                            <input type="text" id="custom-code" placeholder="bebas-pilih" 
+                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-8 pr-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm">
+                        </div>
+                    </div>
+                    <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg transition-transform active:scale-95">
+                        Buat Shortlink
+                    </button>
+                </form>
 
-  return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-blue-100 overflow-x-hidden w-full">
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center cursor-pointer" onClick={() => { setView('home'); setMobileMenuOpen(false); }}>
-              <div className="bg-gray-900 text-white p-1.5 md:p-2 rounded-lg mr-2 md:mr-3">
-                <Link2 className="h-4 w-4 md:h-5 md:w-5" />
-              </div>
-              <span className="font-bold text-lg md:text-xl tracking-tight">snx.biz.id</span>
+                <div id="result-area" class="hidden mt-6 pt-6 border-t border-slate-100">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between gap-3">
+                        <div class="overflow-hidden">
+                            <p class="text-[10px] text-green-600 font-bold uppercase mb-1">Berhasil</p>
+                            <a id="short-link-display" href="#" target="_blank" class="text-green-700 font-medium truncate block font-mono"></a>
+                        </div>
+                        <button onclick="copyLink()" class="bg-white border border-green-200 text-green-600 p-2.5 rounded-lg hover:bg-green-100">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <button onclick="resetForm()" class="w-full mt-4 text-xs text-slate-400 hover:text-slate-600">Buat lagi</button>
+                </div>
+                <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 text-red-600 text-xs text-center rounded-lg border border-red-100"></div>
             </div>
+
+            <div class="max-w-lg mx-auto mt-12">
+                <div class="flex items-center gap-2 mb-4 px-2">
+                    <i class="fa-solid fa-clock-rotate-left text-slate-400 text-xs"></i>
+                    <h3 class="text-slate-500 text-xs font-bold uppercase">Riwayat Terbaru</h3>
+                </div>
+                <div id="recent-links" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <div id="view-docs" class="hidden max-w-3xl mx-auto">
+            <div class="mb-8 pb-8 border-b border-slate-200">
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">Dokumentasi API</h1>
+                <p class="text-slate-600">Panduan integrasi.</p>
+            </div>
+            <div class="space-y-8">
+                <section>
+                    <h2 class="text-xl font-bold text-slate-800 mb-3">1. Format URL</h2>
+                    <div class="bg-slate-900 text-slate-300 p-4 rounded-lg font-mono text-sm">
+                        GET https://snx.biz.id/?s={alias}
+                    </div>
+                </section>
+                <section>
+                    <h2 class="text-xl font-bold text-slate-800 mb-3">2. Contoh Redirect (JS)</h2>
+                    <div class="bg-slate-900 text-slate-300 p-4 rounded-lg font-mono text-sm overflow-auto">
+<pre>const params = new URLSearchParams(window.location.search);
+const alias = params.get('s');
+if(alias) {
+  // Logic redirect di sini
+  window.location.href = "URL_ASLI"; 
+}</pre>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white mt-auto py-6">
+        <div class="text-center text-slate-400 text-xs">© 2024 ShortLink Tool.</div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let currentUser = null;
+
+        const dom = {
+            views: { home: document.getElementById('view-home'), docs: document.getElementById('view-docs') },
+            btns: { home: document.getElementById('btn-home'), docs: document.getElementById('btn-docs') },
+            form: document.getElementById('shorten-form'),
+            result: document.getElementById('result-area'),
+            display: document.getElementById('short-link-display'),
+            error: document.getElementById('error-msg'),
+            submit: document.getElementById('submit-btn'),
+            inputs: { long: document.getElementById('long-url'), code: document.getElementById('custom-code') },
+            overlay: document.getElementById('redirect-overlay'),
+            list: document.getElementById('recent-links')
+        };
+
+        window.navigate = (page) => {
+            if(page === 'docs') {
+                dom.views.home.classList.add('hidden');
+                dom.views.docs.classList.remove('hidden');
+                dom.btns.home.classList.remove('nav-active');
+                dom.btns.docs.classList.add('nav-active');
+                window.location.hash = 'docs';
+            } else {
+                dom.views.home.classList.remove('hidden');
+                dom.views.docs.classList.add('hidden');
+                dom.btns.home.classList.add('nav-active');
+                dom.btns.docs.classList.remove('nav-active');
+                window.location.hash = '';
+            }
+        };
+
+        if(window.location.hash === '#docs') navigate('docs');
+        else navigate('');
+
+        window.addEventListener('hashchange', () => {
+            if(window.location.hash === '#docs') navigate('docs');
+            else navigate('');
+        });
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+                checkRedirect();
+                loadRecent();
+            } catch(e) { console.error(e); }
+        };
+        initAuth();
+
+        async function checkRedirect() {
+            const p = new URLSearchParams(window.location.search);
+            const s = p.get('s');
+            if(!s) return;
             
-            <div className="hidden md:flex space-x-8">
-              <button 
-                onClick={() => setView('home')} 
-                className={`text-sm font-medium transition-colors ${view === 'home' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-              >
-                Home
-              </button>
-              <button 
-                onClick={() => setView('docs')} 
-                className={`text-sm font-medium transition-colors ${view === 'docs' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-              >
-                API Docs
-              </button>
-            </div>
+            dom.overlay.classList.remove('hidden');
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'links_' + s));
+                if(snap.exists()) {
+                    window.location.href = snap.data().originalUrl;
+                } else {
+                    dom.overlay.classList.add('hidden');
+                    alert('Link tidak ditemukan!');
+                }
+            } catch(e) {
+                dom.overlay.classList.add('hidden');
+            }
+        }
 
-            <div className="md:hidden">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-600">
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
-          </div>
-        </div>
+        dom.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            dom.error.classList.add('hidden');
+            
+            const url = dom.inputs.long.value.trim();
+            let code = dom.inputs.code.value.trim().replace(/[^a-zA-Z0-9-]/g, "");
+            
+            if(!code) code = Math.random().toString(36).substring(2, 8);
 
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-gray-100 px-4 py-4 space-y-2 shadow-lg">
-             <button 
-                onClick={() => { setView('home'); setMobileMenuOpen(false); }} 
-                className={`block w-full text-left px-4 py-3 rounded-lg text-sm font-medium ${view === 'home' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
-              >
-                Home
-              </button>
-              <button 
-                onClick={() => { setView('docs'); setMobileMenuOpen(false); }} 
-                className={`block w-full text-left px-4 py-3 rounded-lg text-sm font-medium ${view === 'docs' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
-              >
-                API Docs
-              </button>
-          </div>
-        )}
-      </nav>
+            setLoading(true);
+            try {
+                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'links_' + code);
+                const snap = await getDoc(ref);
+                
+                if(snap.exists()) {
+                    showError('Alias sudah dipakai, cari yang lain.');
+                    setLoading(false);
+                    return;
+                }
 
-      <main className="w-full">
-        {view === 'home' ? renderHome() : renderDocs()}
-      </main>
+                await setDoc(ref, {
+                    originalUrl: url,
+                    code: code,
+                    createdAt: serverTimestamp(),
+                    createdBy: currentUser ? currentUser.uid : 'anon'
+                });
 
-      <footer className="border-t border-gray-100 mt-8 py-8 bg-gray-50 w-full">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400 text-sm">© 2024 snx.biz.id. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
-  );
-}
+                showResult(code);
+                loadRecent();
+            } catch(e) {
+                showError('Gagal membuat link.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function showResult(code) {
+            const base = window.location.href.split('?')[0].split('#')[0];
+            const full = `${base}?s=${code}`;
+            dom.display.textContent = full;
+            dom.display.href = full;
+            dom.form.classList.add('hidden');
+            dom.result.classList.remove('hidden');
+        }
+
+        function setLoading(state) {
+            dom.submit.disabled = state;
+            dom.submit.innerHTML = state ? '<div class="loader mx-auto border-blue-100 border-t-transparent"></div>' : 'Buat Shortlink';
+        }
+
+        function showError(msg) {
+            dom.error.textContent = msg;
+            dom.error.classList.remove('hidden');
+        }
+
+        window.resetForm = () => {
+            dom.inputs.long.value = '';
+            dom.inputs.code.value = '';
+            dom.form.classList.remove('hidden');
+            dom.result.classList.add('hidden');
+        };
+
+        window.copyLink = () => {
+            navigator.clipboard.writeText(dom.display.textContent);
+            alert('Tersalin!');
+        };
+
+        async function loadRecent() {
+            try {
+                const snaps = await getDocs(collection(db, 'artifacts', appId, 'public', 'data'));
+                const links = [];
+                snaps.forEach(d => links.push(d.data()));
+                links.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+                
+                dom.list.innerHTML = links.slice(0,5).map(l => `
+                    <div class="bg-white border border-slate-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
+                        <div class="overflow-hidden mr-3">
+                            <p class="text-slate-800 font-mono text-sm font-bold">/${l.code}</p>
+                            <p class="text-slate-400 text-[10px] truncate">${l.originalUrl}</p>
+                        </div>
+                        <a href="?s=${l.code}" target="_blank" class="bg-slate-50 p-2 rounded text-slate-400 hover:text-blue-600">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+                `).join('') || '<p class="text-center text-xs text-slate-400">Belum ada data.</p>';
+            } catch(e) {}
+        }
+    </script>
+</body>
+</html>
 
 
